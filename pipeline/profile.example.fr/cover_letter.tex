@@ -1,0 +1,44 @@
+% Gabarit de lettre de motivation (français, A4). Le modèle remplit les {{CHAMPS}} ; le reste est à vous.
+% Disponibles : {{DATE}} {{ROLE}} {{COMPANY}} {{OPENING}} {{BODY}} {{BULLETS}} {{GAP}} {{CLOSING}}
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\IfFileExists{french.ldf}{\usepackage[french]{babel}}{}  % paquet texlive-lang-french recommandé
+\usepackage{lmodern}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+\begin{document}
+\textbf{Camille Exemple}\\
+Villeurbanne (69)\\
+06 00 00 00 00\\
+camille.exemple@example.fr
+
+\begin{flushright}
+{{COMPANY}}\\[1em]
+Villeurbanne, le {{DATE}}
+\end{flushright}
+
+\textbf{Objet : candidature au poste de {{ROLE}}}
+
+Madame, Monsieur,
+
+{{OPENING}}
+
+{{BODY}}
+
+\textbf{Ce que j'apporte à ce poste :}
+{{BULLETS}}
+
+{{GAP}}
+
+{{CLOSING}}
+
+Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.
+
+\vspace{1em}
+\textbf{Camille Exemple}
+\end{document}

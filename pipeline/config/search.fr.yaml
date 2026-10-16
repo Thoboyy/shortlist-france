@@ -1,0 +1,418 @@
+# ---------------------------------------------------------------------------
+# autojob — configuration MARCHÉ FRANÇAIS (2026-10)
+#
+# Activation :  AUTOJOB_CONFIG=./config/search.fr.yaml  (dans pipeline/.env)
+# Profil      :  copier profile.example.fr/ vers profile/ puis l'adapter.
+#
+# Pré-rempli pour : consultant / ingénieur IAM-IGA-annuaires, basé à Villeurbanne,
+# CDI, sur site/hybride dans le 69/01/38 ou télétravail total en France.
+# Pour un autre métier : modifier `queries`, les `title_keywords` des sources, les familles
+# de `scoring.v2` et prompts/scorer_v2.fr.md (section 1).
+# ---------------------------------------------------------------------------
+
+profile:
+  location: "Villeurbanne, France"
+  country: FR                       # Adzuna → api.adzuna.com/v1/api/jobs/fr, salaires en EUR
+  language: fr                      # prompts *.fr.md, digest Telegram et dates en français
+  timezone: Europe/Paris
+  dashboard_url: "http://localhost:3100/pipeline/jobs"
+
+# Requêtes envoyées aux sources « par mots-clés » (France Travail, Adzuna, LinkedIn/Indeed, Serper,
+# Workable). Courtes : les sites font du fuzzy matching. L'ORDRE COMPTE : les sources plafonnées
+# prennent les N premières.
+queries:
+  - consultant IAM
+  - ingénieur IAM
+  - consultant IGA
+  - gestion des identités
+  - identity access management
+  - ingénieur Active Directory
+  - consultant cybersécurité IAM
+  - PAM CyberArk
+  - SSO fédération identité
+  - Evidian
+  - SailPoint
+  - ingénieur annuaire LDAP
+  - architecte IAM
+  - ingénieur sécurité identité
+  - consultant Okta Entra ID
+  - ingénieur intégration sécurité
+  - Saviynt
+  - ForgeRock
+  - Keycloak
+
+scoring:
+  min_score_to_queue: 7
+  version: 2
+  v2:
+    family_base: { target: 6, adjacent: 4, 'off': 2 }
+    duties_match: { 0: -3, 1: -1, 2: 0, 3: 1 }
+    # Profil confirmé : senior n'est plus pénalisé ; lead/architecte légèrement ; direction exclue.
+    seniority: { entry: -1, junior: 0, mid: 1, senior: 0, lead: -1, manager: -1, executive: -5 }
+    years_required: { le2: 0, eq3: 1, eq4: 1, ge5: 0, ge8: -2 }
+    missing_must_have: -1
+    signals_cap: 2
+    # ESN = marché IAM dominant en France : neutre. Éditeur IAM = bonus.
+    employer: { startup: 0, smb: 1, enterprise: 1, esn: 0, editor: 1, public_sector: 0, unknown: 0 }
+    # Familles (doivent correspondre aux identifiants de prompts/scorer_v2.fr.md)
+    target_families: [iam_iga, directory_infra, security_integration, it_integration]
+    adjacent_families: [cyber_grc, soc_detection, systems_admin, cloud_devsecops, technical_project_lead,
+                        presales_solutions, software_dev, data_dba]
+    hard_off_families: [helpdesk_support, sales_quota, data_science_ml, hr_recruiting, trades_field_physical,
+                        retail_hospitality, call_center, healthcare_clinical, finance_accounting]
+    signals_allowed: [tool_overlap, candidate_domain, telework, end_client, certification_match, ownership]
+    # Contrats exclus (→ note ≤ 3). Retirer `freelance` pour accepter missions en TJM / portage.
+    not_permanent: [contract, freelance, temporary, part_time, internship, apprenticeship]
+    skip_seniority: [executive]          # « senior » et « lead » restent notés, pas exclus
+    skip_years_at_least: 12              # exclusion dure seulement au-delà de 12 ans exigés
+    citizenship_reason: "habilitation défense / nationalité requise"
+  max_llm_calls_per_run: 600
+  free_quota_reserve: 250
+  quota_recheck_every: 100
+  max_scrapes_per_run: 400
+  workers: 4
+  # Mêmes modèles que la config d'origine (OpenRouter). Ils lisent/écrivent le français sans souci.
+  models:
+    - { name: nvidia/nemotron-3.5-lightning,          rpm: 60, reasoning: "off", max_tokens: 2000 }
+    - { name: nvidia/nemotron-3-ultra-550b-a55b:free, rpm: 20, reasoning: "off", max_tokens: 2000 }
+    - { name: deepseek/deepseek-v4-flash,             rpm: 60, reasoning: "off", max_tokens: 2000 }
+    - { name: poolside/laguna-s-2.1:free,             rpm: 20, reasoning: "off", max_tokens: 2000 }
+    - { name: google/gemma-4-31b-it:free,             rpm: 20 }
+    - { name: openrouter/free,                        rpm: 20 }
+  docs_models:
+    - { name: nvidia/nemotron-3-ultra-550b-a55b:free, rpm: 20 }
+    - { name: poolside/laguna-s-2.1:free,             rpm: 20 }
+    - { name: nvidia/nemotron-3.5-lightning,          rpm: 60 }
+
+expiry:
+  posted_max_days: 30
+  fetched_max_days: 45
+  link_checks_per_run: 60
+
+digest_ranking:
+  freshness_bonus: 1.0
+  low_confidence_penalty: 1.0
+  # À recalculer après quelques semaines d'usage (voir la requête dans config/search.yaml).
+  source_priors:
+    francetravail: 0.5
+    apec: 0.5
+    wttj: 0.5
+
+# Rejets par règles AVANT tout appel LLM. Haute précision uniquement.
+prefilter:
+  title_allow_phrases:
+    - chef de projet
+    - cheffe de projet
+    - chef·fe de projet
+    - ingénieur sécurité
+    - ingénieure sécurité
+    - architecte iam
+    - architecte identité
+  title_exclude_words:              # mot entier, insensible à la casse (pluriel s/es inclus)
+    - stage
+    - stagiaire
+    - alternance
+    - alternant
+    - alternante
+    - apprenti
+    - apprentie
+    - apprentissage
+    - intern
+    - internship
+    - technicien
+    - technicienne
+    - helpdesk
+    - "help desk"
+    - commercial
+    - commerciale
+    - vendeur
+    - vendeuse
+    - "business developer"
+    - directeur
+    - directrice
+    - dsi
+    - rssi
+    - "head of"
+    - vp
+    - cto
+    - ciso
+    - professeur
+    - formateur
+    - formatrice
+    - recruteur
+    - recruteuse
+    - "chargé de recrutement"
+    - "chargée de recrutement"
+    - "talent acquisition"
+    - comptable
+    - infirmier
+    - infirmière
+    - chauffeur
+    - magasinier
+    - cariste
+    - électricien
+    - plombier
+    - soudeur
+  title_exclude_phrases:            # sous-chaîne, insensible à la casse
+    - "support n1"
+    - "support niveau 1"
+    - "technicien de proximité"
+    - "ingénieur d'affaires"
+    - "ingénieure d'affaires"
+    - "account executive"
+    - "account manager"
+    - "sales "
+    - "data scientist"
+    - "analyste soc n1"
+  employment_type_exclude: [stage, internship, intern, alternance, apprentissage, apprenticeship, "contrat pro",
+                            intérim, interim, "MIS", "temps partiel", part-time, saisonnier, seasonal, temporary]
+                            # CDD et freelance ne sont PAS exclus ici : le scorer les marque (not_permanent).
+                            # Ajouter cdd / CDD / freelance / LIB pour les couper avant le LLM.
+  max_posted_age_days: 30
+  company_blocklist:
+    enabled: true
+    min_dismissals: 2
+  employer_block_words: []          # ex. [université, "pôle emploi", mairie] — vide par défaut
+  location:
+    # Règles (autojob/prefilter.py) :
+    #  1. ville de deny_cities, sur site (pas de mention télétravail), sans ville locale → rejet
+    #  1b. département hors local_departements, sur site ou hybride → rejet (« Nanterre (92) », « 75008 Paris »)
+    #  2. États-Unis sur site / résidence US exigée → rejet
+    #  3. pays/région étrangère sans mention France ni « worldwide » → rejet
+    # Les offres sans lieu passent toujours (le LLM tranche).
+    home_markers: [france, "télétravail total", "full remote france", "remote france",
+                   lyon, villeurbanne, auvergne-rhône-alpes, auvergne-rhone-alpes]
+    local_markers: [lyon, villeurbanne, vénissieux, venissieux, bron, vaulx-en-velin, caluire, écully, ecully,
+                    dardilly, limonest, "champagne-au-mont-d'or", saint-priest, saint-fons, oullins, tassin,
+                    "sainte-foy-lès-lyon", rillieux, "décines", decines, meyzieu, "chassieu", "la part-dieu",
+                    "part dieu", gerland, "vaise", "techlid", "sophia"]   # « sophia » à retirer si non pertinent
+    local_departements: ["69", "01", "38"]
+    deny_cities:                    # grandes villes / régions sans code département dans le libellé
+      - paris
+      - "île-de-france"
+      - "ile-de-france"
+      - "la défense"
+      - "la defense"
+      - nanterre
+      - courbevoie
+      - puteaux
+      - boulogne-billancourt
+      - issy-les-moulineaux
+      - "saint-denis"
+      - marseille
+      - "aix-en-provence"
+      - toulouse
+      - bordeaux
+      - lille
+      - nantes
+      - rennes
+      - strasbourg
+      - montpellier
+      - nice
+      - "sophia antipolis"
+      - "clermont-ferrand"
+      - "saint-étienne"
+      - "saint-etienne"
+      - dijon
+      - tours
+      - orléans
+      - rouen
+      - "le mans"
+      - brest
+      - metz
+      - nancy
+      - "occitanie"
+      - "nouvelle-aquitaine"
+      - "hauts-de-france"
+      - "provence"
+      - "bretagne"
+      - "normandie"
+      - "grand est"
+      - "pays de la loire"
+      - genève
+      - geneva
+      - luxembourg
+      - bruxelles
+      - brussels
+    deny_us: true
+    deny_us_cities: [san francisco, new york, nyc, los angeles, chicago, boston, austin, seattle, denver, atlanta,
+                     miami, houston, dallas]
+    remote_ok_countries: []
+    deny_countries:                 # France volontairement ABSENTE
+      - emea
+      - apac
+      - latam
+      - asia
+      - africa
+      - united kingdom
+      - uk
+      - royaume-uni
+      - ireland
+      - germany
+      - allemagne
+      - spain
+      - espagne
+      - portugal
+      - poland
+      - pologne
+      - romania
+      - roumanie
+      - netherlands
+      - pays-bas
+      - italy
+      - italie
+      - india
+      - inde
+      - maroc
+      - morocco
+      - tunisie
+      - tunisia
+      - canada
+      - singapore
+      - australia
+      - belgique
+      - belgium
+      - suisse
+      - switzerland
+      - london
+      - londres
+      - madrid
+      - barcelona
+      - berlin
+      - munich
+      - amsterdam
+      - casablanca
+      - tunis
+
+sources:
+  # ---- Sources françaises ----------------------------------------------------
+  francetravail:                    # API officielle France Travail (clé gratuite, cf. .env.example)
+    enabled: true
+    publiee_depuis: 7               # 1, 3, 7, 14 ou 31 jours
+    max_pages: 2                    # 150 offres par page
+    max_queries: 19
+    delay_s: 0.3
+    # type_contrat: "CDI"          # décommenter pour ne récupérer que des CDI (CDI, CDD, MIS, SAI, LIB…)
+    # qualification: 9             # 9 = cadre
+    passes:
+      - { name: lyon-40km, commune: "69266", distance_km: 40 }   # Villeurbanne + 40 km (Lyon = 69123)
+      - { name: france-teletravail, queries: ["IAM télétravail total", "IGA full remote",
+                                              "identity access management télétravail", "Active Directory full remote"] }
+    title_keywords: [iam, iga, pam, identit, "identity", sso, "active directory", annuaire, ldap, "entra",
+                     "azure ad", okta, sailpoint, evidian, cyberark, saviynt, forgerock, keycloak, ping, wallix,
+                     "habilitation", "gestion des accès", "access management", "sécurité", "securite", cyber,
+                     "intégrat", integrat, "authentification", kerberos, pki]
+    title_exclude: [stage, alternan, apprenti, technicien, commercial, "ingénieur d'affaires", "support n1",
+                    "habilitation électrique", "habilitations électriques", "agent de sécurité", "agent de securite",
+                    "sécurité incendie", "securite incendie", "ssiap", "sûreté", "surete", "sécurité alimentaire",
+                    "hse", "qhse", "sécurité au travail", "prévention"]
+
+  apec:                             # APEC.fr (cadres) — recherche JSON publique, sans clé
+    enabled: true
+    queries: ["IAM", "IGA", "gestion des identités", "Active Directory", "identity access management", "PAM", "SSO"]
+    contrats: ["101888"]            # 101888 = CDI. Liste vide = tous contrats.
+    teletravail: []                 # vide = tous modes (sur site, partiel, total) ; ["20767"] = télétravail total seul
+    # lieux: []                     # ids de lieu APEC (relever dans la requête XHR d'une recherche sur apec.fr)
+    results_per_page: 100
+    max_pages: 3
+    max_days_old: 7
+    delay_s: 1.0
+    title_keywords: [iam, iga, pam, identit, identity, sso, "active directory", annuaire, ldap, entra, okta, sailpoint,
+                     evidian, cyberark, saviynt, forgerock, keycloak, "gestion des accès", "access management",
+                     "sécurité", cyber, intégrat, kerberos, pki]
+    title_exclude: [stage, alternan, commercial, "ingénieur d'affaires", directeur, directrice, "habilitation électrique",
+                    "sécurité incendie", "hse", "qhse", "sûreté"]
+
+  wttj:                             # Welcome to the Jungle (index Algolia public)
+    enabled: true
+    max_days_old: 7
+    max_experience_years: 10
+    hits_per_page: 200
+    max_pages: 3
+    queries: ["*"]
+    passes:
+      - name: lyon                  # bureaux à Lyon / Villeurbanne, tout mode de travail
+        filters: "contract_type:full_time AND offices.country_code:FR AND (offices.city:Lyon OR offices.city:Villeurbanne OR offices.city:Écully OR offices.city:Limonest)"
+        office_cities: [Lyon, Villeurbanne, Écully, Limonest]
+        country_codes: [FR]
+      - name: france-remote
+        filters: "remote:fulltime AND contract_type:full_time AND offices.country_code:FR"
+        country_codes: [FR]
+    title_keywords: [iam, iga, pam, identit, identity, sso, "active directory", annuaire, ldap, entra, okta, sailpoint,
+                     evidian, cyberark, saviynt, forgerock, keycloak, "access management", "sécurité", security,
+                     cyber, "intégrat", integrat, kerberos, pki, "devsecops"]
+
+  adzuna:                           # agrégateur ; même clé qu'au Canada, country=fr via profile.country
+    enabled: true
+    match: title
+    where: [Lyon, France]           # passe locale (rayon) + passe nationale (le prefilter garde le télétravail)
+    distance_km: 40
+    pages: 2
+    results_per_page: 50
+    max_days_old: 7
+
+  boards:                           # LinkedIn + Indeed France via python-jobspy (sans clé)
+    enabled: true
+    sites: [linkedin, indeed]
+    country_indeed: france
+    results_per_query: 30
+    hours_old: 120
+    max_queries: 19
+    linkedin_fetch_description: false
+    locations:
+      - { location: "Lyon, Auvergne-Rhône-Alpes, France" }
+      - { location: "France", remote_only: true, max_queries: 10 }   # télétravail total, toute la France
+
+  serper:                           # Google via serper.dev — job boards FR non couverts par une API
+    enabled: true
+    queries_per_run: 30
+    results_per_query: 10
+    recency: qdr:w
+    plan:
+      - { suffix: "site:hellowork.com/fr-fr/emplois Lyon", queries: default }
+      - { suffix: "site:free-work.com/fr/tech-it (Lyon OR télétravail) CDI", queries: default }
+      - { suffix: "site:cadremploi.fr/emploi/detail_offre Lyon", queries: default }
+      - { suffix: "site:meteojob.com Lyon", queries: default }
+      - { suffix: "(site:jobs.lever.co OR site:job-boards.greenhouse.io OR site:jobs.ashbyhq.com OR site:jobs.smartrecruiters.com) (Lyon OR France)", queries: default }
+      - { suffix: "(site:teamtailor.com OR site:welcomekit.co) (Lyon OR France)", queries: default }
+
+  workable_search:                  # jobs.workable.com — très utilisé par les PME européennes
+    enabled: true
+    day_range: 7
+    max_queries: 10
+    max_pages: 2
+    pause_s: 0.8
+    passes:
+      - { location: Lyon, country: France }
+      - { location: France, workplace: remote, country: France }
+    title_keywords: [iam, iga, pam, identit, identity, sso, "active directory", ldap, entra, okta, sailpoint,
+                     cyberark, "access management", security, sécurité, cyber, integrat, intégrat]
+
+  # ---- Sources non pertinentes pour la France (désactivées) --------------
+  jooble: { enabled: false }
+  jobbank: { enabled: false }
+  remotive: { enabled: false }
+  remoteok: { enabled: false }
+  jobicy: { enabled: false }
+  themuse: { enabled: false }
+  weworkremotely: { enabled: false }
+  himalayas: { enabled: false }
+  workday: { enabled: false }
+  eluta: { enabled: false }
+  ats_companies: { enabled: false }
+  yc: { enabled: false }
+  amazon: { enabled: false }
+  hn: { enabled: false }
+  successfactors: { enabled: false }
+  getro: { enabled: false }
+  remoterocketship: { enabled: false }
+  workingnomads: { enabled: false }
+  gcjobs: { enabled: false }
+  bcps: { enabled: false }
+
+# `autojob companies news` — communiqués de recrutement (serper /news, quelques crédits)
+discovery:
+  news_queries:
+    - "Lyon recrutement cybersécurité"
+    - "ESN Lyon recrute IAM"
+    - "ouverture agence Lyon recrutement ingénieurs"

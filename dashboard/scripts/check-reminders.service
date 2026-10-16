@@ -1,0 +1,12 @@
+[Unit]
+Description=Job Search Command Center - Telegram Stale Application Reminders
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=saunalserver
+WorkingDirectory=/home/saunalserver/projects/shortlist/dashboard
+ExecStart=/home/saunalserver/projects/shortlist/dashboard/node_modules/.bin/tsx scripts/check-reminders.ts
+StandardOutput=journal
+StandardError=journal

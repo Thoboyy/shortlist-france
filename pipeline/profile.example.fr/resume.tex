@@ -1,0 +1,52 @@
+% Gabarit de CV (une page, A4, en français). Le modèle réordonne les \resumeItem et réécrit
+% UNIQUEMENT le paragraphe de la section Profil ; le reste n'est jamais modifié.
+% Remplacez le contenu par le vôtre en gardant les macros \resumeSubheading / \resumeItem.
+\documentclass[a4paper,10.5pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\IfFileExists{french.ldf}{\usepackage[french]{babel}}{}  % paquet texlive-lang-french recommandé
+\usepackage{lmodern}
+\usepackage[margin=1.6cm]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\titleformat{\section}{\scshape\large\raggedright}{}{0em}{}[\titlerule]
+\titlespacing{\section}{0pt}{6pt}{3pt}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+\newcommand{\resumeSubheading}[4]{\textbf{#1} \hfill #2\\ \textit{#3} \hfill \textit{#4}\vspace{-2pt}}
+\newcommand{\resumeItem}[1]{\item #1}
+\newenvironment{resumeItems}{\begin{itemize}[leftmargin=0.18in, itemsep=1pt, topsep=2pt]}{\end{itemize}\vspace{3pt}}
+\begin{document}
+\begin{center}
+  {\Huge \scshape Camille Exemple}\\[3pt]
+  Villeurbanne (69) $|$ 06 00 00 00 00 $|$ camille.exemple@example.fr $|$ linkedin.com/in/camille-exemple
+\end{center}
+\section*{Profil}
+Consultant IAM / IGA avec cinq ans d'expérience en intégration Evidian, annuaires Active Directory et LDAP et SSO Kerberos chez des clients grands comptes. J'interviens du cadrage à la mise en production et au MCO.
+\section*{Compétences}
+\begin{itemize}[leftmargin=*, itemsep=0pt]
+  \item \textbf{IAM / IGA :} Evidian IGA, WAM, SSO, provisioning, workflows, revue des droits
+  \item \textbf{Annuaires :} Active Directory, LDAP, AD LDS, Kerberos, GPO
+  \item \textbf{Développement :} Java, PHP, PowerShell, SQL, Git, Ant
+  \item \textbf{Systèmes et bases :} Windows Server, IIS, Linux, MySQL, ODBC/JDBC
+  \item \textbf{Langues :} français (natif), anglais (professionnel)
+\end{itemize}
+\section*{Expérience professionnelle}
+\resumeSubheading{Consultant IAM / IGA}{2021 -- aujourd'hui}{ESN Exemple}{Villeurbanne}
+\begin{resumeItems}
+  \resumeItem{Intégration et MCO de solutions Evidian IGA, WAM et SSO pour des clients grands comptes.}
+  \resumeItem{Développement de connecteurs de synchronisation PHP et Java vers Active Directory, LDAP et AD LDS.}
+  \resumeItem{Mise en place du SSO Kerberos : SPN, GPO, configuration IIS et navigateurs.}
+  \resumeItem{Migration de bases MySQL 5.7 vers 8.4 en production, avec plan de sauvegarde et de retour arrière.}
+  \resumeItem{Rédaction des procédures, cahiers de recette et supports de comité de pilotage.}
+\end{resumeItems}
+\resumeSubheading{Ingénieur systèmes (alternance)}{2019 -- 2021}{Entreprise Exemple}{Lyon}
+\begin{resumeItems}
+  \resumeItem{Administration Windows Server et Active Directory pour 800 utilisateurs.}
+  \resumeItem{Automatisation des créations de comptes en PowerShell.}
+\end{resumeItems}
+\section*{Formation}
+\textbf{Diplôme d'ingénieur, sécurité des systèmes d'information} \hfill 2018 -- 2021\\
+\textit{École Exemple, Lyon}
+\end{document}

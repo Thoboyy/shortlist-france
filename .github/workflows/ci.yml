@@ -1,0 +1,22 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04   # pinned: ubuntu-latest migrates to Ubuntu 26 on 2026-10-19
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"   # matches the server venv
+      - run: pip install -r pipeline/requirements.txt
+      - run: pip install -e pipeline   # the autojob package itself (the server venv has it; CI needs it too)
+      - run: ruff check pipeline/autojob/
+      - name: Run pytest
+        working-directory: pipeline
+        run: |
+          if ! pytest -q 2>&1 | tee /tmp/p.log; then
+            echo "::error::pytest failures: $(grep -m4 -E 'FAILED|ERROR |Error|assert' /tmp/p.log | tr '\n' ';' | cut -c1-600)"
+            exit 1
+          fi
